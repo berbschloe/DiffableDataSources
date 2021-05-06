@@ -23,12 +23,14 @@ struct SnapshotStructure<SectionID: Hashable, ItemID: Hashable> {
     }
 
     struct Section: DifferentiableSection, Equatable {
-        var differenceIdentifier: SectionID
+        var differenceIdentifier: Int
+        var contentIdentifier: SectionID
         var elements: [Item] = []
         var isReloaded: Bool
 
         init(id: SectionID, items: [Item], isReloaded: Bool) {
-            self.differenceIdentifier = id
+            self.contentIdentifier = id
+            self.differenceIdentifier = id.hashValue
             self.elements = items
             self.isReloaded = isReloaded
         }
@@ -38,18 +40,18 @@ struct SnapshotStructure<SectionID: Hashable, ItemID: Hashable> {
         }
 
         init<C: Swift.Collection>(source: Section, elements: C) where C.Element == Item {
-            self.init(id: source.differenceIdentifier, items: Array(elements), isReloaded: source.isReloaded)
+            self.init(id: source.contentIdentifier, items: Array(elements), isReloaded: source.isReloaded)
         }
 
         func isContentEqual(to source: Section) -> Bool {
-            return !isReloaded && differenceIdentifier == source.differenceIdentifier
+            return !isReloaded && contentIdentifier == source.contentIdentifier
         }
     }
 
     var sections: [Section] = []
 
     var allSectionIDs: [SectionID] {
-        return sections.map { $0.differenceIdentifier }
+        return sections.map { $0.contentIdentifier }
     }
 
     var allItemIDs: [ItemID] {
@@ -67,7 +69,7 @@ struct SnapshotStructure<SectionID: Hashable, ItemID: Hashable> {
     }
 
     func section(containing itemID: ItemID) -> SectionID? {
-        return itemPositionMap()[itemID]?.section.differenceIdentifier
+        return itemPositionMap()[itemID]?.section.contentIdentifier
     }
 
     mutating func append(itemIDs: [ItemID], to sectionID: SectionID? = nil, file: StaticString = #file, line: UInt = #line) {
@@ -248,7 +250,7 @@ private extension SnapshotStructure {
     }
 
     func sectionIndex(of sectionID: SectionID) -> Array<Section>.Index? {
-        return sections.firstIndex { $0.differenceIdentifier.isEqualHash(to: sectionID) }
+        return sections.firstIndex { $0.contentIdentifier.isEqualHash(to: sectionID) }
     }
 
     @discardableResult
